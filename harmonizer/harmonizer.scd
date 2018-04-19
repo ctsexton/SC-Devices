@@ -12,20 +12,6 @@ t = { |msg, time, replyAddr, recvPort|
 		freq = msg[2];
 		amp = msg[3];
 		flag = msg[4];
-		if (flag == 0) {
-			q.setAt(0.0054);
-			w.setAt(0.0054);
-		};
-		if (flag == -1) {
-			amp = 0;
-			q.setAt(0.012);
-			w.setAt(0.012);
-		};
-		if (flag == 1) {
-			amp = 0;	
-			q.setAt(0.012);
-			w.setAt(0.012);
-		};
 
 		if (amp >= 0.0001) {
 			f.setAt(index, freq.cpsmidi);
@@ -49,16 +35,19 @@ MIDIIn.connect(0, MIDIIn.findPort("Akai MPK61", "Akai MPK61 MIDI 1"));
 ~notes = Array.newClear(128);
 ~midi_src_uid = ~akai_uid;
 
+
 // Setup MIDI functions
 MIDIdef.noteOn(\harmNoteOn, {
 	arg vel, nn, chan, src;
+	if (nn > 0) {
 	~notes[nn] = Synth.new(\sextone,
 		[
 			\offset, nn - 60,
 			\vel, vel,
 			\gate, 1
 		], addAction: 'addToHead');
-}, srcID: ~midi_src_uid);
+	}
+}, srcID: ~midi_src_uid, chan: 0);
 
 
 MIDIdef.noteOff(\harmNoteOff, {
@@ -73,8 +62,8 @@ MIDIdef.noteOff(\harmNoteOff, {
 	// setup buses for audio and control routing
 	a = Bus.control(s, 20);
 	f = Bus.control(s, 20);
-	q = Bus.control(s, 20);
-	w = Bus.control(s, 20);
+	//q = Bus.control(s, 20);
+	//w = Bus.control(s, 20);
 	v = Bus.audio(s, 1);
 	~output = {Out.ar(0, v.ar!2)}.play;
 	// Add synth defs
@@ -82,11 +71,13 @@ MIDIdef.noteOff(\harmNoteOff, {
 		arg offset, vel, gate;
 		var note, dist, env, amp;
 		amp = 2;
-		env = EnvGen.kr(Env.adsr(0.005, 0.5, 0.5, 0.01, amp), gate, doneAction: 2);
-		note = Mix.ar(SinOsc.ar((VarLag.kr((offset + f.kr).midicps, w.kr)), 0, 2 * VarLag.kr(a.kr, q.kr)));
+		env = EnvGen.kr(Env.adsr(0.05, 0.5, 0.5, 0.05, amp), gate, doneAction: 2);
+		note = Mix.ar(SinOsc.ar((VarLag.kr((offset + f.kr).midicps, 0.0054)), 0, VarLag.kr(a.kr, 0.0054)));
 		dist = note.tanh * env;
 		Out.ar(v, dist);
 		}).add;
 	};
+~synthFunctions.value;
+
 
 s.waitForBoot({ ~synthFunctions.value; "Harmonizer is successfully started".postln; ~toPd.sendMsg("/fromSC", "start") });

@@ -1,4 +1,4 @@
 #!/bin/bash
 
 pd -jack -audiobuf 0 -alsamidi -mididev 1,2 ./sigmund_to_osc.pd &
-sclang ./harmonizer.scd
+scide ./harmonizer.scd
